@@ -6,7 +6,8 @@ self.addEventListener("install", event => {
       return cache.addAll([ // cache files to work offline
         "./",
         "./index.html",
-        "./manifest.json"
+        "./manifest.json",
+        "./ble.js"
       ]);
     })
   );

@@ -15,10 +15,19 @@
       justify-content: center;
       align-items: center;
     }
-    
+    button {
+      padding: 16px 32px;
+      font-size: 1.2rem;
+    }
     .container {
       text-align: center;
-      font-family: sans-serif; /*make it look less like a 90s website*/
+      font-family: "Lucida Console", monospace; /*make it look less like a 90s website*/
+    }
+    .ble-status {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      font-size: 0.8rem;
     }
   </style>
 </head>
@@ -28,13 +37,19 @@
     <h1>Hello Mauricio</h1>
     <p>Some funny quip (forgot im not funny)</p>
 
-    <button id="connect-btn">Connect</button>
+    <button id="connect-btn">CONNECT</button>
+    <button id="open-btn">OPEN</button>
+    <button id="close-btn">CLOSE</button>
+    <button id="reset-btn">RESET</button>
   </div>
+  <div id="ble-status" class="ble-status">BLE: DISCONNECTED</div>
 
   <script>
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('service-worker.js');
     }
   </script>
+
+  <script src="ble.js"></script>
 </body>
 </html>
