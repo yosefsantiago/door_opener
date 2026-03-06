@@ -3,7 +3,7 @@ const CACHE = "door-opener-v1";
 self.addEventListener("install", event => {
   event.waitUntil( // don't continue until fully installed
     caches.open(CACHE).then(cache => {
-      return cache.addAll([ // cache files to work offline
+      return cache.addAll([
         "./",
         "./index.html",
         "./manifest.json",
@@ -14,7 +14,27 @@ self.addEventListener("install", event => {
 });
 
 self.addEventListener("fetch", event => {
+  if (event.request.mode === "navigate") {
+    event.respondWith(
+      fetch(event.request).catch(() => caches.match("./index.html"))
+    );
+    return;
+  }
   event.respondWith(
     fetch(event.request).catch(() => caches.match(event.request))
+  );
+});
+
+self.addEventListener("activate", event => {
+  event.waitUntil(
+    caches.keys().then(keys => {
+      return Promise.all(
+        keys.map(key => {
+          if (key !== CACHE) {
+            return caches.delete(key);
+          }
+        })
+      );
+    })
   );
 });
