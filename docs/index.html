@@ -1,16 +1,40 @@
 <!DOCTYPE html>
 <html>
 <head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Door Opener</title>
+
   <link rel="manifest" href="manifest.json">
+
+  <style>
+    body {
+      margin: 0; /*remove default browser spacing*/
+      height: 100vh; /*vh: viewport height*/
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    
+    .container {
+      text-align: center;
+      font-family: sans-serif; /*make it look less like a 90s website*/
+    }
+  </style>
 </head>
+
 <body>
-  <h1>Hello world</h1>
-  <p>This is my first GitHub Pages site.</p>
+  <div class="container">
+    <h1>Hello world</h1>
+    <p>This is my first GitHub Pages site.</p>
+
+    <button id="connect-btn">Connect</button>
+  </div>
+
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('service-worker.js');
+    }
+  </script>
 </body>
-<script>
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('service-worker.js');
-  }
-</script>
 </html>
