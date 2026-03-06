@@ -15,8 +15,9 @@ self.addEventListener("install", event => {
 
 self.addEventListener("fetch", event => {
   event.respondWith(
-    caches.match(event.request).then(response => {
-      return response || fetch(event.request); // cache first, network fallback
-    })
+    // try network, if it fails use cached files
+    fetch(event.request) 
+      .then(response => response)
+      .catch(() => caches.match(event.request))
   );
 });
