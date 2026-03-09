@@ -1,5 +1,6 @@
 const CACHE = "door-opener-v1";
 
+// Cache Files for Offline
 self.addEventListener("install", event => {
   event.waitUntil( // don't continue until fully installed
     caches.open(CACHE).then(cache => {
@@ -13,15 +14,16 @@ self.addEventListener("install", event => {
   );
 });
 
+// Online vs Offline Behavior (cache first, network fallback)
 self.addEventListener("fetch", event => {
   event.respondWith(
-    // try network, if it fails use cached files
-    fetch(event.request) 
-      .then(response => response)
-      .catch(() => caches.match(event.request))
+    caches.match(event.request).then(response => {
+      return response || fetch(event.request);
+    })
   );
 });
 
+// Remove Old Versions from Cache
 self.addEventListener("activate", event => {
   event.waitUntil(
     caches.keys().then(keys => {
