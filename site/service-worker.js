@@ -1,4 +1,4 @@
-const CACHE = "door-opener-1.0.__VERSION__";
+const CACHE = "door-opener-__VERSION__";
 
 // Cache Files for Offline
 self.addEventListener("install", event => {

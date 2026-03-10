@@ -23,8 +23,9 @@ jobs:
  
       - name: Inject version
         run: |
-          sed -i "s/__VERSION__/${GITHUB_RUN_NUMBER}/g" site/service-worker.js
-          sed -i "s/__VERSION__/${GITHUB_RUN_NUMBER}/g" site/index.html
+          version="1.0.${{ github.run_number }}"
+          sed -i "s/__VERSION__/version/g" site/service-worker.js
+          sed -i "s/__VERSION__/version/g" site/index.html
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
