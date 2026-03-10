@@ -20,11 +20,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
- 
-      - name: Inject version
-        run: |
-          sed -i "s/__VERSION__/${GITHUB_RUN_NUMBER}/g" site/service-worker.js
-          sed -i "s/__VERSION__/${GITHUB_RUN_NUMBER}/g" site/index.html
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
