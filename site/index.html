@@ -16,7 +16,7 @@
       align-items: center;
     }
     button {
-      padding: 16px 32px;
+      padding: 24px 48px;
       font-size: 1.2rem;
     }
     .container {
@@ -28,6 +28,7 @@
       gap: 10px;
     }
     .ble-status {
+      font-family: "Lucida Console", monospace;
       position: absolute;
       top: 10px;
       right: 10px;
@@ -39,15 +40,15 @@
 <body>
   <div class="container">
     <h1>Some funny quip (forgot im not funny)</h1>
-    <p>Version 1.0.4</p>
+    <p>Version 1.0.3</p>
 
     <button id="connect-btn">CONNECT</button>
     <button id="open-btn">OPEN</button>
     <button id="close-btn">CLOSE</button>
     <button id="reset-btn">RESET</button>
+    <p id="last-command">Last command: none</p>
   </div>
   <div id="ble-status" class="ble-status">BLE: DISCONNECTED</div>
-  <p id="last-command">Last command: none</p>
 
   <script>
     if ('serviceWorker' in navigator) {

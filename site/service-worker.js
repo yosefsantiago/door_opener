@@ -1,4 +1,4 @@
-const CACHE = "door-opener-1.0.4";
+const CACHE = "door-opener-1.0.3";
 
 // Cache Files for Offline
 self.addEventListener("install", event => {
@@ -8,7 +8,7 @@ self.addEventListener("install", event => {
         "./",
         "./index.html",
         "./manifest.json",
-        "./ble2.js"
+        "./ble.js"
       ]);
     })
   );
