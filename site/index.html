@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -39,7 +39,7 @@
 <body>
   <div class="container">
     <h1>Some funny quip (forgot im not funny)</h1>
-    <p>Version 1.0.3</p>
+    <p>Version 1.0.4</p>
 
     <button id="connect-btn">CONNECT</button>
     <button id="open-btn">OPEN</button>
@@ -47,6 +47,7 @@
     <button id="reset-btn">RESET</button>
   </div>
   <div id="ble-status" class="ble-status">BLE: DISCONNECTED</div>
+  <p id="last-command">Last command: none</p>
 
   <script>
     if ('serviceWorker' in navigator) {
@@ -54,6 +55,6 @@
     }
   </script>
 
-  <script src="ble.js"></script>
+  <script src="ble2.js"></script>
 </body>
 </html>
