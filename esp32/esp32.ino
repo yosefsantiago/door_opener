@@ -6,25 +6,22 @@
 #include <BLEUtils.h>
 #include <BLE2902.h>
 
-char bleCommand = '\0';
+char bleCommand = '\0'; // emergency stop: 'S'
 bool deviceConnected = false;
 bool restartAdvertising = false;
 bool isOpen = false;
 bool isClosed = false;
 bool motorOn = false;
-bool disengaged = false; // servo control
-const int openedPin = 32;
-const int closedPin = 35;
-const int pinX = 33; // left H-bridge control
-const int pinY = 25; // right H-bridge control
+bool disengaged = false;  // servo control
+const int openedPin = 32; // limit switch (normally open)
+const int closedPin = 35; // limit switch (normally open)
+const int pinX = 33;      // left H-bridge control (DO)
+const int pinY = 25;      // right H-bridge control (D1)
 const int echoPin1 = 14;
 const int trigPin1 = 12;
 const int echoPin2 = 26;
 const int trigPin2 = 27;
 const int servoPin = 13;
-
-
-
 
 #define SERVICE_UUID           "6E400001-B5A3-F393-E0A9-E50E24DCCA9E"
 #define CHARACTERISTIC_UUID_RX "6E400002-B5A3-F393-E0A9-E50E24DCCA9E"
@@ -125,9 +122,34 @@ bool checkConnection() {
 }
 
 //===================================================================
+// MOTOR CONTROL
+
+/**
+ * @brief H-bridge control functions to set the DC motor's speed
+ * 1. spin clockwise
+ * 2. spin counter clockwise
+ * 3. stop motor
+ * 4. brakes
+ */
+void forward() { digitalWrite(pinX,HIGH); digitalWrite(pinY,LOW); } 
+void reverse() { digitalWrite(pinX,LOW); digitalWrite(pinY,HIGH); }
+void motorstop() { digitalWrite(pinX,LOW); digitalWrite(pinY,LOW); }
+void motorbrake() { digitalWrite(pinX,HIGH); digitalWrite(pinY,HIGH); }
+
+//===================================================================
+// DISENGAGE MOTOR
+
+
+//===================================================================
+//  OBSTRUCTION DETECTION
+
+
+//===================================================================
 // CONTROL LOOPS
 
-void openDoor() {}
+void openDoor() {
+
+}
 
 void closeDoor() {}
 
@@ -149,6 +171,11 @@ void setup() {
   pinMode(trigPin2,OUTPUT);
   digitalWrite(trigPin1,LOW);
   digitalWrite(trigPin2,LOW);
+
+  pinMode(pinX,OUTPUT);
+  pinMode(pinY,OUTPUT);
+  digitalWrite(pinX,LOW);
+  digitalWrite(pinY,LOW);
 }
 
 void loop() {
@@ -161,8 +188,6 @@ void loop() {
       openDoor();
     } else if (bleCommand == 'C') {
       closeDoor();
-    } else if (bleCommand == 'R') {
-      resetDoor();
     } else {
       warning();
     }
