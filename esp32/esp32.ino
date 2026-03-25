@@ -9,10 +9,6 @@
 char bleCommand = '\0'; // emergency stop: 'S'
 bool deviceConnected = false;
 bool restartAdvertising = false;
-bool isOpen = false;
-bool isClosed = false;
-bool motorOn = false;
-bool disengaged = false;  // servo control
 const int openedPin = 32; // limit switch (normally open)
 const int closedPin = 35; // limit switch (normally open)
 const int pinX = 33;      // left H-bridge control (DO)
@@ -65,7 +61,7 @@ class MyCallbacks : public BLECharacteristicCallbacks {
 };
 
 /**
- * @brief Setup BLE functionality
+ * @brief setup BLE functionality
  * 1. initialize bluetooth server
  * 2. define comunication characteristics between esp32 and phone
  * 3. make the esp32 discoverable to other devices
@@ -122,48 +118,152 @@ bool checkConnection() {
 }
 
 //===================================================================
-// MOTOR CONTROL
+// LIMIT SWITCHES
 
 /**
- * @brief H-bridge control functions to set the DC motor's speed
- * 1. spin clockwise
- * 2. spin counter clockwise
- * 3. stop motor
- * 4. brakes
+ * @brief read limit switch outputs
+ */
+bool doorIsOpen() { return digitalRead(openedPin) == HIGH; }
+bool doorIsClosed() { return digitalRead(closedPin) == HIGH; }
+
+/**
+ * @brief check if both limitswitches are pressed; should not happen
+ */
+bool invalidLimitState() { return doorIsOpen() && doorIsClosed(); }
+
+//===================================================================
+// DC MOTOR CONTROL
+
+/**
+ * @brief H-bridge control functions to set the DC motor's spin
  */
 void forward() { digitalWrite(pinX,HIGH); digitalWrite(pinY,LOW); } 
 void reverse() { digitalWrite(pinX,LOW); digitalWrite(pinY,HIGH); }
 void motorstop() { digitalWrite(pinX,LOW); digitalWrite(pinY,LOW); }
 void motorbrake() { digitalWrite(pinX,HIGH); digitalWrite(pinY,HIGH); }
 
-//===================================================================
-// DISENGAGE MOTOR
+/**
+ * @brief verify if emergency stop was detected
+ */
+bool emergencyStopRequested() { return bleCommand == 'S'; }
 
+//===================================================================
+// SERVO MOTOR CONTROL
+
+/**
+ * @brief set servo duty cycles to _ (i.e. _ degrees)
+ */
+void engage() {
+  // TODO
+}
+
+/**
+ * @brief set servo duty cycles to 0 (i.e. 0 degrees)
+ */
+void disengage() {
+  // TODO
+}
 
 //===================================================================
 //  OBSTRUCTION DETECTION
 
+/**
+ * @brief check all obstruction sensors
+ */
+bool obstructionDetected() {
+  // TODO
+  return false;
+}
 
 //===================================================================
 // CONTROL LOOPS
 
-void openDoor() {
-
+void warning(char w) {
+  // TODO
 }
 
-void closeDoor() {}
+/**
+ * @brief Opening door control loop
+ * 1. check if door is open
+ * 2. check obstruction before starting
+ * 3. engage servo motor
+ * 4. turn on DC motor
+ * 5. check emergency stop, obstructions, if the door has been opened, and
+ *    if the door went past what was expectected (i.e. missed limit switch)
+ */
+void openDoor() {
+  Serial.println("Starting openDoor()");
 
-void resetDoor() {}
+  // clear start command so only a new 'S' matters during motion
+  bleCommand = '\0';
 
-void warning() {}
+  if (doorIsOpen()) {
+    Serial.println("Door already open");
+    return;
+  }
+  if (obstructionDetected()) {
+    Serial.println("Obstruction detected before opening");
+    warning('O');
+    return;
+  }
+
+  Serial.println("Engaging motor with servo...");
+  engage();
+  delay(200);   // allow mechanism to engage
+  Serial.println("Opening door...");
+  forward();
+
+  unsigned long startTime = millis();
+  const unsigned long maxOpenTime = 5000; // timeout safety
+
+  while (true) {
+    if (emergencyStopRequested()) {
+      Serial.println("Emergency stop during opening");
+      motorstop();
+      disengage();
+      return;
+    }
+    if (obstructionDetected()) {
+      Serial.println("Obstruction detected during opening");
+      motorbrake();
+      delay(50);
+      motorstop();
+      warning('O');
+      disengage();
+      return;
+    }
+    if (doorIsOpen()) {
+      Serial.println("Door reached open position");
+      motorstop();
+      disengage();
+      return;
+    }
+    if (millis() - startTime > maxOpenTime) {
+      Serial.println("Open timeout reached");
+      motorstop();
+      warning('T');
+      disengage();
+      return;
+    }
+    delay(10);
+    
+  }
+}
+
+void closeDoor() {
+  // TODO
+}
+
+//===================================================================
+// MAIN
 
 void setup() {
   Serial.begin(115200);
   delay(1000);
   setupBLE("ESP32_Bluetooth");
  
-  pinMode(openedPin,INPUT); 
-  pinMode(closedPin,INPUT); 
+  pinMode(openedPin,INPUT_PULLUP); 
+  pinMode(closedPin,INPUT_PULLUP); 
 
   pinMode(echoPin1,INPUT);
   pinMode(echoPin2,INPUT);
@@ -176,25 +276,29 @@ void setup() {
   pinMode(pinY,OUTPUT);
   digitalWrite(pinX,LOW);
   digitalWrite(pinY,LOW);
+
+  pinMode(servoPin,OUTPUT);
+  digitalWrite(servoPin,LOW);
 }
 
 void loop() {
   if (checkConnection()) {
-
-    if (bleCommand != '\0') {
-      Serial.print("Processed command: ");
-      Serial.println(bleCommand);
-    } else if (bleCommand == 'O') {
+    if (bleCommand == 'O') {
+      Serial.println("Processed command: O");
       openDoor();
+      bleCommand = '\0';
     } else if (bleCommand == 'C') {
+      Serial.println("Processed command: C");
       closeDoor();
-    } else {
-      warning();
+      bleCommand = '\0';
+    } else if (bleCommand == 'S') {
+      Serial.println("Processed command: S");
+      motorstop();
+      disengage();
+      bleCommand = '\0';
+    } else if (bleCommand != '\0') {
+      Serial.println("Unknown command processed");
+      bleCommand = '\0';
     }
   }
-
-  // analogWrite(27,125);
-  // analogWrite(26,125);
-  // analogWrite(25,125);
-  // analogWrite(33,125);
 }
