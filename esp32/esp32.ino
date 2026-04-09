@@ -21,8 +21,9 @@ const int trigPin2 = 27;
 const int engagedAngle = 180;
 const int disengagedAngle = 0;
 const float minDistance = 5.0;           // ultrasonic detection range (cm)
-const unsigned long maxOpenTime = 5000;  // timeout safety
-const unsigned long maxCloseTime = 5000; // timeout safety
+const unsigned long maxOpenTime = 9000;  // timeout safety
+const unsigned long maxCloseTime = 9000; // timeout safety
+
 
 #define SERVICE_UUID           "6E400001-B5A3-F393-E0A9-E50E24DCCA9E"
 #define CHARACTERISTIC_UUID_RX "6E400002-B5A3-F393-E0A9-E50E24DCCA9E"
@@ -163,7 +164,7 @@ void motorbrake() { digitalWrite(pinX,HIGH); digitalWrite(pinY,HIGH); }
 /**
  * @brief verify if emergency stop was detected
  */
-bool emergencyStopRequested() { return bleCommand == 'S'; }
+bool emergencyStopRequested() { return bleCommand == 'R'; } // for now the reset input is stop
 
 //===================================================================
 // SERVO MOTOR CONTROL
@@ -194,13 +195,13 @@ bool checkUltrasonic(const int trigPin, const int echoPin) {
   digitalWrite(trigPin,HIGH);
   delayMicroseconds(10);
   digitalWrite(trigPin,LOW);
-  float duration = pulseIn(echoPin,HIGH, 30000); // time (us); wait 30 ms for a response
+  float duration = pulseIn(echoPin,HIGH, 50000); // time (us); wait 50 ms for a response
   if (duration == 0) {
-    Serial.println("Ultrasonic sensor failure");
-    warning('U');
-    return false;   // change to true for fail-safe behavior: stop if the sensor isn't read
+    Serial.println("No echo detected");
+    // change to true for fail-safe behavior: stop if the sensor isn't read
+    return false; // assume no obstruction
   }
-  float distance = duration * 0.034 / 2;// converts echo time to distance (cm)
+  float distance = duration * 0.034 / 2; // converts echo time to distance (cm)
   return distance <= minDistance;
 }
 
@@ -231,23 +232,22 @@ bool obstructionDetected(char mode) {
  */
 void warning(char w) {
   if (w == 'O') {
-    Serial.println("WARNING: Obstruction detected");
+    // WARNING: Obstruction detected
     sendPhoneMessage("WARNING: Obstruction detected, motor stopped");
   } 
   else if (w == 'T') {
-    Serial.println("WARNING: Timeout fault, check limit switches");
+    // WARNING: Timeout fault, check limit switches
     sendPhoneMessage("WARNING: Switch was not detected, check limit switch position");
   }
   else if (w == 'U') {
-    Serial.println("WARNING: Ultrasonic sensor failure");
+    // WARNING: Ultrasonic sensor failure
     sendPhoneMessage("WARNING: Ultrasonic sensor failed to read");
   }
   else if (w == 'L') {
-    Serial.println("WARNING: Both limit switches active");
-    sendPhoneMessage("WARNING: Both switches are pressed at the same time");
+    // WARNING: Both limit switches active
+    sendPhoneMessage("WARNING: Both limit switches are pressed at the same time");
   }
   else {
-    Serial.println("WARNING: Unknown fault");
     sendPhoneMessage("WARNING: Unknown fault");
   }
 }
@@ -439,7 +439,7 @@ void loop() {
       closeDoor();
       bleCommand = '\0';
     } 
-    else if (bleCommand == 'S') {
+    else if (bleCommand == 'R') {
       Serial.println("Processed command: S");
       motorstop();
       disengage();
