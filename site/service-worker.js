@@ -1,4 +1,4 @@
-const CACHE = "door-opener-1.0.4";
+const CACHE = "door-opener-1.0.5";
 
 // Cache Files for Offline
 self.addEventListener("install", event => {
@@ -14,11 +14,22 @@ self.addEventListener("install", event => {
   );
 });
 
-// Online vs Offline Behavior (cache first, network fallback)
+// Online vs Offline Behavior
 self.addEventListener("fetch", event => {
   event.respondWith(
-    caches.match(event.request).then(response => {
-      return response || fetch(event.request);
+    caches.match(event.request).then(cachedResponse => {
+      // 1. If we found a match in the cache, return it!
+      if (cachedResponse) {
+        return cachedResponse;
+      }
+      // 2. Otherwise, try the network
+      return fetch(event.request).catch(() => {
+        // 3. NETWORK FAILED (User is offline or server is down)
+        // If they were trying to load a page, give them the cached index.html
+        if (event.request.mode === 'navigate') {
+          return caches.match('./index.html');
+        }
+      });
     })
   );
 });

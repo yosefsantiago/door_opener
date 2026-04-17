@@ -166,7 +166,7 @@ void motorbrake() { digitalWrite(pinX,HIGH); digitalWrite(pinY,HIGH); }
 /**
  * @brief verify if emergency stop was detected
  */
-bool emergencyStopRequested() { return bleCommand == 'R'; } // for now the reset input is stop
+bool emergencyStopRequested() { return bleCommand == 'S'; } 
 
 //===================================================================
 // SERVO MOTOR CONTROL
@@ -448,7 +448,7 @@ void loop() {
       closeDoor();
       bleCommand = '\0';
     } 
-    else if (bleCommand == 'R') {
+    else if (bleCommand == 'S') {
       Serial.println("Processed command: S");
       motorstop();
       disengage();

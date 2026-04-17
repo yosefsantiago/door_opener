@@ -4,7 +4,7 @@ const lastCommand = document.getElementById("last-command");
 const connectBtn = document.getElementById("connect-btn");
 const openBtn = document.getElementById("open-btn");
 const closeBtn = document.getElementById("close-btn");
-const resetBtn = document.getElementById("reset-btn");
+const stopBtn = document.getElementById("stop-btn");
 
 const SERVICE_UUID = "6e400001-b5a3-f393-e0a9-e50e24dcca9e";
 const CHARACTERISTIC_UUID_RX = "6e400002-b5a3-f393-e0a9-e50e24dcca9e";
@@ -77,7 +77,7 @@ async function sendCommand(command) {
 connectBtn.addEventListener("click", connectBLE);
 openBtn.addEventListener("click", () => sendCommand("OPEN"));
 closeBtn.addEventListener("click", () => sendCommand("CLOSE"));
-resetBtn.addEventListener("click", () => sendCommand("RESET"));
+stopBtn.addEventListener("click", () => sendCommand("STOP"));
 
 setBleStatus("BLE: DISCONNECTED");
 setLastCommand("none");
