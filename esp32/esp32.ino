@@ -5,8 +5,9 @@
 #include <BLEServer.h>
 #include <BLEUtils.h>
 #include <BLE2902.h>
+#include <ESP32Servo.h>
 
-char bleCommand = '\0';                  // emergency stop: 'S'
+char bleCommand = '\0';                  
 bool deviceConnected = false;
 bool restartAdvertising = false;
 const int openedPin = 32;                // limit switch (normally open)
@@ -18,12 +19,13 @@ const int echoPin1 = 34;
 const int trigPin1 = 12;
 const int echoPin2 = 35;
 const int trigPin2 = 27;
-const int engagedAngle = 180;
-const int disengagedAngle = 0;
+const int engagedAngle = 5;
+const int disengagedAngle = 40;
 const float minDistance = 5.0;           // ultrasonic detection range (cm)
 const unsigned long maxOpenTime = 9000;  // timeout safety
 const unsigned long maxCloseTime = 9000; // timeout safety
 
+Servo engagingServo;
 
 #define SERVICE_UUID           "6E400001-B5A3-F393-E0A9-E50E24DCCA9E"
 #define CHARACTERISTIC_UUID_RX "6E400002-B5A3-F393-E0A9-E50E24DCCA9E"
@@ -173,14 +175,18 @@ bool emergencyStopRequested() { return bleCommand == 'R'; } // for now the reset
  * @brief set servo duty cycles to _ (i.e. _ degrees)
  */
 void engage() {
-  // TODO
+  engagingServo.write(engagedAngle);
+  Serial.print("Servo engaged at angle: ");
+  Serial.println(engagedAngle);
 }
 
 /**
  * @brief set servo duty cycles to 0 (i.e. 0 degrees)
  */
 void disengage() {
-  // TODO
+  engagingServo.write(disengagedAngle);
+  Serial.print("Servo disengaged at angle: ");
+  Serial.println(disengagedAngle);
 }
 
 //===================================================================
@@ -424,7 +430,10 @@ void setup() {
   digitalWrite(pinY,LOW);
 
   pinMode(servoPin,OUTPUT);
-  digitalWrite(servoPin,LOW);
+  engagingServo.setPeriodHertz(50);          // standard servo frequency
+  engagingServo.attach(servoPin, 500, 2500); // pulse range in microseconds
+  disengage();                               // start safe
+  delay(300);
 }
 
 void loop() {
