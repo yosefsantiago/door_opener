@@ -5,6 +5,7 @@ const connectBtn = document.getElementById("connect-btn");
 const openBtn = document.getElementById("open-btn");
 const closeBtn = document.getElementById("close-btn");
 const stopBtn = document.getElementById("stop-btn");
+const manualBtn = document.getElementById("manual-btn");
 const setupBtn = document.getElementById("setup-btn");
 
 const SERVICE_UUID = "6e400001-b5a3-f393-e0a9-e50e24dcca9e";
@@ -79,6 +80,7 @@ connectBtn.addEventListener("click", connectBLE);
 openBtn.addEventListener("click", () => sendCommand("OPEN"));
 closeBtn.addEventListener("click", () => sendCommand("CLOSE"));
 stopBtn.addEventListener("click", () => sendCommand("STOP"));
+manualBtn.addEventListener("click", () => sendCommand("MANUAL OPERATION"));
 setupBtn.addEventListener("click", () => sendCommand("WHEEL SETUP"));
 
 setBleStatus("BLE: DISCONNECTED");

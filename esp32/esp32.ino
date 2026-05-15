@@ -17,29 +17,32 @@ bool setupModeDisengaged = false;
 bool motorRunning = false;
 unsigned long overCurrentStart = 0;                          // log when over current was detected
 unsigned long idleOverCurrentStart = 0;
-const bool ultrasonicEnabled = false;      
+const bool ultrasonicEnabled = true; 
+const bool currentSpikeEnabled = false;
+const bool limitSwitchEnabled = false;     
 const int INA_SDA = 27;                                      // Serial Data pin for I2C
-const int INA_SCL = 14;                                      // Serial Clock pin for I2C
-const int openedPin = 32;                                    // limit switch (normally open)
-const int closedPin = 26;                                    // limit switch (normally open)
-const int pinX = 33;                                         // left H-bridge control (DO)
-const int pinY = 25;                                         // right H-bridge control (D1)
-const int servoPin = 13;
-const int echoPin1 = 34;
-const int trigPin1 = 12;
-const int echoPin2 = 2;
-const int trigPin2 = 15;
+const int INA_SCL = 14;                                      // Serial Clock pin for I2C                                      
+const int openedPin = 13;                                    // limit switch (normally open)
+const int closedPin = 21;                                    // limit switch (normally open)
+const int pinX = 16;                                         // left H-bridge control (DO)
+const int pinY = 17;                                         // right H-bridge control (D1)
+const int servoPin = 19;
+const int echoPin1 = 33;                                     // opening
+const int trigPin1 = 25;                                     // opening
+const int echoPin2 = 22;                                     // closing
+const int trigPin2 = 23;                                     // closing
 const int engagedAngle = 5;
-const int disengagedAngle = 100;
+const int disengagedAngle = 70;
 const float minDistance = 5.0;                               // ultrasonic detection range (cm)
-const float peakCurrent_obst = 120.0;                        // tuned expected load (mA)
-const float peakCurrent_norm = 0.3;                         // tuned expected load (mA)
+const float peakCurrent_obst = 400.0;                        // tuned expected load (mA)
+const float peakCurrent_norm = 0.10;                         // tuned expected load (mA)
 const float motorCurrentLimit_obst = peakCurrent_obst * 1.5; // obstruction threshold (mA)
 const float motorCurrentLimit_norm = peakCurrent_norm * 1.5; // normal door operation threshold (mA)
-const unsigned long maxOpenTime = 9000;                      // timeout safety
-const unsigned long maxCloseTime = 9000;                     // timeout safety
+const unsigned long maxOpenTime = 12000;                     // timeout safety
+const unsigned long maxCloseTime = 12000;                    // timeout safety
 const unsigned long currentTripTime = 100;                   // time above limit before fault (ms)
 const unsigned long motorStartupIgnoreTime = 300;            // ignore startup spike
+const unsigned long manualOverrideTime = 10000;              // time servo stays disengaged for manual use
 
 Servo engagingServo;
 Adafruit_INA219 ina219;
@@ -159,15 +162,37 @@ void sendPhoneMessage(const char* msg) {
 // LIMIT SWITCHES
 
 /**
- * @brief read limit switch outputs
+ * @brief read opened state limit switch
  */
-bool doorIsOpen() { return digitalRead(openedPin) == LOW; }
-bool doorIsClosed() { return digitalRead(closedPin) == LOW; }
+bool doorIsOpen() {
+  if (!limitSwitchEnabled) {
+    return false;
+  }
+
+  return digitalRead(openedPin) == LOW;
+}
+
+/**
+ * @brief read closed state limit switch
+ */
+bool doorIsClosed() {
+  if (!limitSwitchEnabled) {
+    return false;
+  }
+
+  return digitalRead(closedPin) == LOW;
+}
 
 /**
  * @brief check if both limitswitches are pressed; should not happen
  */
-bool invalidLimitState() { return doorIsOpen() && doorIsClosed(); }
+bool invalidLimitState() {
+  if (!limitSwitchEnabled) {
+    return false;
+  }
+
+  return doorIsOpen() && doorIsClosed();
+}
 
 //===================================================================
 // DC MOTOR CONTROL
@@ -269,6 +294,10 @@ void printCurrent(const char* label, float current) {
  * 4. check if the current spike is sustained
  */
 bool overCurrentDetected(unsigned long motionStartTime) {
+  if (!currentSpikeEnabled) {
+    return false;
+  }
+
   // ignore normal motor startup spike
   if (millis() - motionStartTime < motorStartupIgnoreTime) {
     overCurrentStart = 0;
@@ -299,6 +328,10 @@ bool overCurrentDetected(unsigned long motionStartTime) {
  * @brief check if someone is operating the door normally (i.e. pushing the door)
  */
 bool idleLoadDetected() {
+  if (!currentSpikeEnabled) {
+    return false;
+  }
+
   float current_mA = readMotorCurrent_mA();
 
   printCurrent("Idle current mA", current_mA);
@@ -324,13 +357,52 @@ bool idleLoadDetected() {
 }
 
 /**
+ * @brief detect if a person is near the door while the system is idle
+ * 
+ * If the motor is not running and the servo is engaged, either ultrasonic
+ * sensor can trigger a manual override. This disengages the servo so the
+ * person can operate the door manually.
+ */
+bool idleUltrasonicDetected() {
+  if (!ultrasonicEnabled) {
+    return false;
+  }
+
+  if (motorRunning || disengaged) {
+    return false;
+  }
+
+  bool openingSideDetected = checkUltrasonic(trigPin1, echoPin1);
+  bool closingSideDetected = checkUltrasonic(trigPin2, echoPin2);
+
+  return openingSideDetected || closingSideDetected;
+}
+
+/**
+ * @brief temporarily disengage servo to allow manual door operation
+ */
+void allowManualOperation() {
+  Serial.println("Manual operation detected → disengaging servo");
+  disengage();
+
+  sendPhoneMessage("MANUAL: Door movement detected, servo disengaged");
+
+  delay(manualOverrideTime);
+
+  Serial.println("Manual override time ended → engaging servo");
+  engage();
+
+  sendPhoneMessage("MANUAL: Servo re-engaged");
+}
+
+/**
  * @brief check all obstruction sensors
  * 1. check current sensor
  * 2. determine if we are opening or closing to check the appropriate sensor
  * 3. check ultrasonic1 if mode is 'O' and ultrasonic2 if mode is 'C', and they are enabled
  */
 bool obstructionDetected(char mode, unsigned long motionStartTime) {
-  if (overCurrentDetected(motionStartTime)) {
+  if (currentSpikeEnabled && overCurrentDetected(motionStartTime)) {
     return true;
   }
   if (ultrasonicEnabled) {
@@ -528,18 +600,22 @@ void setupWheelEngagement() {
 
 void setup() {
   Serial.begin(115200);
-  delay(1000);
+
   setupBLE("ESP32_Bluetooth");
  
-  pinMode(openedPin,INPUT_PULLUP); 
-  pinMode(closedPin,INPUT_PULLUP); 
+  if (limitSwitchEnabled) {
+    pinMode(openedPin, INPUT_PULLUP); 
+    pinMode(closedPin, INPUT_PULLUP); 
+  }
 
-  pinMode(echoPin1,INPUT);
-  pinMode(echoPin2,INPUT);
-  pinMode(trigPin1,OUTPUT);
-  pinMode(trigPin2,OUTPUT);
-  digitalWrite(trigPin1,LOW);
-  digitalWrite(trigPin2,LOW);
+  if (ultrasonicEnabled) {
+    pinMode(echoPin1, INPUT);
+    pinMode(echoPin2, INPUT);
+    pinMode(trigPin1, OUTPUT);
+    pinMode(trigPin2, OUTPUT);
+    digitalWrite(trigPin1, LOW);
+    digitalWrite(trigPin2, LOW);
+  }
 
   pinMode(pinX,OUTPUT);
   pinMode(pinY,OUTPUT);
@@ -550,13 +626,16 @@ void setup() {
   engagingServo.setPeriodHertz(50);          // standard servo frequency
   engagingServo.attach(servoPin, 500, 2500); // pulse range in microseconds
 
-  Wire.begin(INA_SDA,INA_SCL);
-  if (!ina219.begin()) {
-    Serial.println("Failed to find INA219 current sensor");
-    sendPhoneMessage("WARNING: INA219 not detected");
-  } 
-  else {
-    Serial.println("INA219 current sensor ready");
+  if (currentSpikeEnabled) {
+    Wire.begin(INA_SDA, INA_SCL);
+
+    if (!ina219.begin()) {
+      Serial.println("Failed to find INA219 current sensor");
+      sendPhoneMessage("WARNING: INA219 not detected");
+    } 
+    else {
+      Serial.println("INA219 current sensor ready");
+    }
   }
 
   engage();
@@ -571,6 +650,9 @@ void loop() {
     disengage();
     idleOverCurrentStart = 0;
     sendPhoneMessage("WARNING: External force detected");
+  }
+  if (idleUltrasonicDetected()) {
+    allowManualOperation();
   }
   if (checkConnection()) {
     if (bleCommand == 'O') {
@@ -593,6 +675,11 @@ void loop() {
     else if (bleCommand == 'W') {
       Serial.println("Processed command: W");
       setupWheelEngagement();
+      bleCommand = '\0';
+    }
+    else if (bleCommand == 'M') {
+      Serial.println("Processed command: M");
+      allowManualOperation();
       bleCommand = '\0';
     }
     else if (bleCommand != '\0') {
